@@ -1,583 +1,600 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import AOS from 'aos';
 import 'aos/dist/aos.css';
 import './home.css';
 
 const Home = () => {
-  const [currentLang, setCurrentLang] = useState('en');
-  const [isNavOpen, setIsNavOpen] = useState(false);
-  const [scrolled, setScrolled] = useState(false);
-  const [activeNavItem, setActiveNavItem] = useState('home');
-  const [showMobileMenu, setShowMobileMenu] = useState(false);
-
-  const languages = {
-    en: { name: 'English', code: 'en' },
-    hi: { name: 'हिंदी', code: 'hi' },
-    ta: { name: 'தமிழ்', code: 'ta' },
-    te: { name: 'తెలుగు', code: 'te' },
-    bn: { name: 'বাংলা', code: 'bn' }
-  };
-
-  // Navigation items with icons
-  const navItems = [
-    { id: 'home', icon: '🏠', label: 'Home', href: '#home' },
-    { id: 'schemes', icon: '📋', label: 'All Schemes', href: '#schemes' },
-    { id: 'categories', icon: '📑', label: 'Categories', href: '#categories' },
-    { id: 'eligibility', icon: '✅', label: 'Check Eligibility', href: '#eligibility' },
-    { id: 'application', icon: '📝', label: 'Application Status', href: '#application' },
-    { id: 'documents', icon: '📄', label: 'Documents', href: '#documents' },
-    { id: 'faqs', icon: '❓', label: 'FAQs', href: '#faqs' },
-    { id: 'contact', icon: '📞', label: 'Contact Us', href: '#contact' }
+  const [activeSection, setActiveSection] = useState('dashboard');
+  const [isLoading, setIsLoading] = useState(true);
+  const [terminalText, setTerminalText] = useState('');
+  const [glitchEffect, setGlitchEffect] = useState(false);
+  const [systemStatus, setSystemStatus] = useState('ONLINE');
+  const [scrollProgress, setScrollProgress] = useState(0);
+  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
+  
+  // CRT Terminal Text Animation
+  const terminalMessages = [
+    'INITIALIZING GOVERNMENT SCHEMES PORTAL...',
+    'LOADING CITIZEN DATABASE...',
+    'CONNECTING TO SECURE SERVERS...',
+    'SYSTEM READY. WELCOME TO GSP v2.0'
   ];
 
-  // Sample government schemes data
-  const schemesData = {
-    en: [
-      {
-        id: 1,
-        name: "PM Kisan Samman Nidhi",
-        description: "Financial support to farmers with direct benefit transfer of ₹6000 per year",
-        category: "Agriculture",
-        benefits: ["₹6000 annual support", "Direct bank transfer", "Small & marginal farmers"],
-        isNew: true,
-        icon: "🌾",
-        gradient: "gradient-1"
-      },
-      {
-        id: 2,
-        name: "Ayushman Bharat - PMJAY",
-        description: "Health insurance coverage of ₹5 lakh per family per year for secondary and tertiary care",
-        category: "Healthcare",
-        benefits: ["₹5 lakh coverage", "1350+ medical packages", "Free treatment"],
-        isNew: false,
-        icon: "🏥",
-        gradient: "gradient-2"
-      },
-      {
-        id: 3,
-        name: "PM Awas Yojana",
-        description: "Affordable housing scheme providing financial assistance for house construction",
-        category: "Housing",
-        benefits: ["₹2.5 lakh subsidy", "Interest subsidy", "Affordable housing"],
-        isNew: false,
-        icon: "🏠",
-        gradient: "gradient-3"
-      }
-    ],
-    hi: [
-      {
-        id: 1,
-        name: "पीएम किसान सम्मान निधि",
-        description: "किसानों को ₹6000 प्रति वर्ष की प्रत्यक्ष वित्तीय सहायता",
-        category: "कृषि",
-        benefits: ["₹6000 वार्षिक सहायता", "सीधे बैंक हस्तांतरण", "छोटे और सीमांत किसान"],
-        isNew: true,
-        icon: "🌾",
-        gradient: "gradient-1"
-      },
-      {
-        id: 2,
-        name: "आयुष्मान भारत - पीएमजेएवाई",
-        description: "माध्यमिक और तृतीयक देखभाल के लिए प्रति परिवार प्रति वर्ष ₹5 लाख का स्वास्थ्य बीमा",
-        category: "स्वास्थ्य सेवा",
-        benefits: ["₹5 लाख कवरेज", "1350+ चिकित्सा पैकेज", "मुफ्त इलाज"],
-        isNew: false,
-        icon: "🏥",
-        gradient: "gradient-2"
-      },
-      {
-        id: 3,
-        name: "पीएम आवास योजना",
-        description: "घर निर्माण के लिए वित्तीय सहायता प्रदान करने वाली किफायती आवास योजना",
-        category: "आवास",
-        benefits: ["₹2.5 लाख सब्सिडी", "ब्याज सब्सिडी", "किफायती आवास"],
-        isNew: false,
-        icon: "🏠",
-        gradient: "gradient-3"
-      }
-    ],
-    ta: [
-      {
-        id: 1,
-        name: "பிஎம் கிசான் சம்மான் நிதி",
-        description: "விவசாயிகளுக்கு ஆண்டுக்கு ₹6000 நேரடி நிதி உதவி",
-        category: "விவசாயம்",
-        benefits: ["₹6000 ஆண்டு உதவி", "நேரடி வங்கி பரிமாற்றம்", "சிறு மற்றும் குறு விவசாயிகள்"],
-        isNew: true,
-        icon: "🌾",
-        gradient: "gradient-1"
-      },
-      {
-        id: 2,
-        name: "ஆயுஷ்மான் பாரத் - பிஎம்ஜேஏஒய்",
-        description: "இரண்டாம் நிலை மற்றும் மூன்றாம் நிலை சிகிச்சைக்கு குடும்பத்திற்கு ஆண்டுக்கு ₹5 லட்சம் சுகாதார காப்பீடு",
-        category: "சுகாதாரம்",
-        benefits: ["₹5 லட்சம் காப்பீடு", "1350+ மருத்துவ தொகுப்புகள்", "இலவச சிகிச்சை"],
-        isNew: false,
-        icon: "🏥",
-        gradient: "gradient-2"
-      },
-      {
-        id: 3,
-        name: "பிஎம் ஆவாஸ் யோஜனா",
-        description: "வீடு கட்டுவதற்கு நிதி உதவி வழங்கும் மலிவு விலை வீட்டு திட்டம்",
-        category: "வீட்டுவசதி",
-        benefits: ["₹2.5 லட்சம் மானியம்", "வட்டி மானியம்", "மலிவு விலை வீடு"],
-        isNew: false,
-        icon: "🏠",
-        gradient: "gradient-3"
-      }
-    ],
-    te: [
-      {
-        id: 1,
-        name: "పిఎం కిసాన్ సమ్మాన్ నిధి",
-        description: "రైతులకు సంవత్సరానికి ₹6000 ప్రత్యక్ష ఆర్థిక సహాయం",
-        category: "వ్యవసాయం",
-        benefits: ["₹6000 వార్షిక సహాయం", "నేరుగా బ్యాంక్ బదిలీ", "చిన్న మరియు సన్న రైతులు"],
-        isNew: true,
-        icon: "🌾",
-        gradient: "gradient-1"
-      },
-      {
-        id: 2,
-        name: "ఆయుష్మాన్ భారత్ - పిఎంజెఏవై",
-        description: "ద్వితీయ మరియు తృతీయ సంరక్షణ కోసం కుటుంబానికి సంవత్సరానికి ₹5 లక్షల ఆరోగ్య బీమా",
-        category: "ఆరోగ్య సంరక్షణ",
-        benefits: ["₹5 లక్షల కవరేజీ", "1350+ వైద్య ప్యాకేజీలు", "ఉచిత చికిత్స"],
-        isNew: false,
-        icon: "🏥",
-        gradient: "gradient-2"
-      }
-    ],
-    bn: [
-      {
-        id: 1,
-        name: "পিএম কিষাণ সম্মান নিধি",
-        description: "কৃষকদের বছরে ₹6000 সরাসরি আর্থিক সহায়তা",
-        category: "কৃষি",
-        benefits: ["₹6000 বার্ষিক সহায়তা", "সরাসরি ব্যাংক স্থানান্তর", "ক্ষুদ্র ও প্রান্তিক কৃষক"],
-        isNew: true,
-        icon: "🌾",
-        gradient: "gradient-1"
-      },
-      {
-        id: 2,
-        name: "আয়ুষ্মান ভারত - পিএমজেএওয়াই",
-        description: "দ্বিতীয় এবং তৃতীয় পর্যায়ের যত্নের জন্য পরিবার প্রতি বছরে ₹5 লক্ষ স্বাস্থ্য বীমা",
-        category: "স্বাস্থ্যসেবা",
-        benefits: ["₹5 লক্ষ কভারেজ", "1350+ চিকিৎসা প্যাকেজ", "বিনামূল্যে চিকিৎসা"],
-        isNew: false,
-        icon: "🏥",
-        gradient: "gradient-2"
-      }
-    ]
-  };
+  // Navigation Items with CRT Style
+  const navItems = [
+    { id: 'dashboard', label: 'DASHBOARD', icon: '◆', sublabel: 'System Overview' },
+    { id: 'schemes', label: 'SCHEMES', icon: '▣', sublabel: 'Active Programs' },
+    { id: 'eligibility', label: 'ELIGIBILITY', icon: '▤', sublabel: 'Check Status' },
+    { id: 'apply', label: 'APPLY', icon: '▥', sublabel: 'New Application' },
+    { id: 'track', label: 'TRACK', icon: '▦', sublabel: 'Application Status' },
+    { id: 'analytics', label: 'ANALYTICS', icon: '▧', sublabel: 'Data Insights' },
+    { id: 'support', label: 'SUPPORT', icon: '▨', sublabel: 'Help Center' },
+    { id: 'settings', label: 'SETTINGS', icon: '▩', sublabel: 'System Config' }
+  ];
 
-  const content = {
-    en: {
-      title: 'Government Schemes Portal',
-      subtitle: 'Your Gateway to All Government Benefits',
-      searchPlaceholder: 'Search for schemes...',
-      categories: ['Education', 'Healthcare', 'Agriculture', 'Business', 'Women & Child', 'Senior Citizens'],
-      stats: [
-        { number: '500+', label: 'Active Schemes', icon: '📊' },
-        { number: '10M+', label: 'Beneficiaries', icon: '👥' },
-        { number: '24/7', label: 'Support', icon: '🚀' },
-        { number: '100%', label: 'Free Service', icon: '✨' }
-      ],
-      buttons: {
-        learnMore: 'Learn More',
-        applyNow: 'Apply Now',
-        viewAll: 'View All Schemes',
-        login: 'Login'
-      }
+  // Scheme Categories for SIH Problem Statement
+  const schemeCategories = [
+    {
+      id: 'agriculture',
+      name: 'Agriculture & Farmers Welfare',
+      schemes: 127,
+      beneficiaries: '12.5M',
+      icon: '🌾',
+      color: '#00ff41',
+      description: 'Supporting farmers with subsidies, insurance, and technology'
     },
-    hi: {
-      title: 'सरकारी योजना पोर्टल',
-      subtitle: 'सभी सरकारी लाभों का आपका प्रवेश द्वार',
-      searchPlaceholder: 'योजनाओं की खोज करें...',
-      categories: ['शिक्षा', 'स्वास्थ्य सेवा', 'कृषि', 'व्यापार', 'महिला एवं बाल', 'वरिष्ठ नागरिक'],
-      stats: [
-        { number: '500+', label: 'सक्रिय योजनाएं', icon: '📊' },
-        { number: '10M+', label: 'लाभार्थी', icon: '👥' },
-        { number: '24/7', label: 'सहायता', icon: '🚀' },
-        { number: '100%', label: 'मुफ्त सेवा', icon: '✨' }
-      ],
-      buttons: {
-        learnMore: 'और जानें',
-        applyNow: 'अभी आवेदन करें',
-        viewAll: 'सभी योजनाएं देखें',
-        login: 'लॉगिन'
-      }
+    {
+      id: 'education',
+      name: 'Education & Skill Development',
+      schemes: 89,
+      beneficiaries: '45.2M',
+      icon: '📚',
+      color: '#00ffff',
+      description: 'Scholarships, skill training, and educational infrastructure'
     },
-    ta: {
-      title: 'அரசு திட்டங்கள் போர்டல்',
-      subtitle: 'அனைத்து அரசு நலன்களுக்கான உங்கள் நுழைவாயில்',
-      searchPlaceholder: 'திட்டங்களைத் தேடுக...',
-      categories: ['கல்வி', 'சுகாதாரம்', 'விவசாயம்', 'வணிகம்', 'பெண்கள் & குழந்தைகள்', 'மூத்த குடிமக்கள்'],
-      stats: [
-        { number: '500+', label: 'செயலில் உள்ள திட்டங்கள்', icon: '📊' },
-        { number: '10M+', label: 'பயனாளிகள்', icon: '👥' },
-        { number: '24/7', label: 'ஆதரவு', icon: '🚀' },
-        { number: '100%', label: 'இலவச சேவை', icon: '✨' }
-      ],
-      buttons: {
-        learnMore: 'மேலும் அறிக',
-        applyNow: 'இப்போது விண்ணப்பிக்கவும்',
-        viewAll: 'அனைத்து திட்டங்களையும் காண்க',
-        login: 'உள்நுழைய'
-      }
+    {
+      id: 'healthcare',
+      name: 'Healthcare & Wellness',
+      schemes: 76,
+      beneficiaries: '78.9M',
+      icon: '🏥',
+      color: '#ff00ff',
+      description: 'Health insurance, medical facilities, and wellness programs'
     },
-    te: {
-      title: 'ప్రభుత్వ పథకాల పోర్టల్',
-      subtitle: 'అన్ని ప్రభుత్వ ప్రయోజనాలకు మీ గేట్‌వే',
-      searchPlaceholder: 'పథకాల కోసం వెతకండి...',
-      categories: ['విద్య', 'ఆరోగ్య సంరక్షణ', 'వ్యవసాయం', 'వ్యాపారం', 'మహిళలు & పిల్లలు', 'సీనియర్ పౌరులు'],
-      stats: [
-        { number: '500+', label: 'క్రియాశీల పథకాలు', icon: '📊' },
-        { number: '10M+', label: 'లబ్ధిదారులు', icon: '👥' },
-        { number: '24/7', label: 'మద్దతు', icon: '🚀' },
-        { number: '100%', label: 'ఉచిత సేవ', icon: '✨' }
-      ],
-      buttons: {
-        learnMore: 'మరింత తెలుసుకోండి',
-        applyNow: 'ఇప్పుడు దరఖాస్తు చేసుకోండి',
-        viewAll: 'అన్ని పథకాలను చూడండి',
-        login: 'లాగిన్'
-      }
+    {
+      id: 'women',
+      name: 'Women & Child Development',
+      schemes: 94,
+      beneficiaries: '34.7M',
+      icon: '👩‍👧',
+      color: '#ffff00',
+      description: 'Empowerment programs, nutrition schemes, and safety initiatives'
     },
-    bn: {
-      title: 'সরকারি প্রকল্প পোর্টাল',
-      subtitle: 'সমস্ত সরকারি সুবিধার জন্য আপনার প্রবেশদ্বার',
-      searchPlaceholder: 'প্রকল্পগুলি অনুসন্ধান করুন...',
-      categories: ['শিক্ষা', 'স্বাস্থ্যসেবা', 'কৃষি', 'ব্যবসা', 'মহিলা ও শিশু', 'প্রবীণ নাগরিক'],
-      stats: [
-        { number: '500+', label: 'সক্রিয় প্রকল্প', icon: '📊' },
-        { number: '10M+', label: 'সুবিধাভোগী', icon: '👥' },
-        { number: '24/7', label: 'সহায়তা', icon: '🚀' },
-        { number: '100%', label: 'বিনামূল্যে সেবা', icon: '✨' }
-      ],
-      buttons: {
-        learnMore: 'আরও জানুন',
-        applyNow: 'এখন আবেদন করুন',
-        viewAll: 'সমস্ত প্রকল্প দেখুন',
-        login: 'লগইন'
-      }
+    {
+      id: 'rural',
+      name: 'Rural Development',
+      schemes: 112,
+      beneficiaries: '56.3M',
+      icon: '🏘️',
+      color: '#ff6b00',
+      description: 'Infrastructure, employment, and rural connectivity'
+    },
+    {
+      id: 'urban',
+      name: 'Urban Development',
+      schemes: 68,
+      beneficiaries: '23.4M',
+      icon: '🏙️',
+      color: '#00ff9f',
+      description: 'Smart cities, housing, and urban infrastructure'
     }
-  };
+  ];
+
+  // Featured Schemes Data
+  const featuredSchemes = [
+    {
+      id: 1,
+      name: 'PM-KISAN',
+      fullName: 'Pradhan Mantri Kisan Samman Nidhi',
+      category: 'Agriculture',
+      benefits: '₹6,000 per year',
+      eligibility: 'Small and marginal farmers',
+      status: 'ACTIVE',
+      priority: 'HIGH',
+      lastUpdated: '2024-01-15'
+    },
+    {
+      id: 2,
+      name: 'PMJAY',
+      fullName: 'Pradhan Mantri Jan Arogya Yojana',
+      category: 'Healthcare',
+      benefits: '₹5 lakh health coverage',
+      eligibility: 'Bottom 40% of population',
+      status: 'ACTIVE',
+      priority: 'CRITICAL',
+      lastUpdated: '2024-01-10'
+    },
+    {
+      id: 3,
+      name: 'PM-AWAS',
+      fullName: 'Pradhan Mantri Awas Yojana',
+      category: 'Housing',
+      benefits: 'Housing subsidy up to ₹2.67 lakh',
+      eligibility: 'EWS, LIG, MIG categories',
+      status: 'ACTIVE',
+      priority: 'HIGH',
+      lastUpdated: '2024-01-12'
+    }
+  ];
 
   useEffect(() => {
+    // Initialize AOS with custom settings
     AOS.init({
-      duration: 1000,
-      easing: 'ease-in-out',
+      duration: 1200,
+      easing: 'ease-out-cubic',
       once: false,
       mirror: true,
       anchorPlacement: 'top-bottom',
     });
 
+    // Terminal text animation
+    let messageIndex = 0;
+    let charIndex = 0;
+    const typeWriter = setInterval(() => {
+      if (messageIndex < terminalMessages.length) {
+        if (charIndex < terminalMessages[messageIndex].length) {
+          setTerminalText(prev => prev + terminalMessages[messageIndex][charIndex]);
+          charIndex++;
+        } else {
+          if (messageIndex < terminalMessages.length - 1) {
+            setTerminalText('');
+            messageIndex++;
+            charIndex = 0;
+          } else {
+            clearInterval(typeWriter);
+            setTimeout(() => setIsLoading(false), 1000);
+          }
+        }
+      }
+    }, 50);
+
+    // Scroll progress tracker
     const handleScroll = () => {
-      setScrolled(window.scrollY > 50);
+      const totalScroll = document.documentElement.scrollHeight - window.innerHeight;
+      const currentProgress = (window.pageYOffset / totalScroll) * 100;
+      setScrollProgress(currentProgress);
+
+      // Random glitch effect
+      if (Math.random() > 0.98) {
+        setGlitchEffect(true);
+        setTimeout(() => setGlitchEffect(false), 200);
+      }
     };
+
+    // Mouse tracking for effects
+    const handleMouseMove = (e) => {
+      setMousePosition({ x: e.clientX, y: e.clientY });
+    };
+
+    // System status simulator
+    const statusInterval = setInterval(() => {
+      const statuses = ['ONLINE', 'PROCESSING', 'SYNCING', 'READY'];
+      setSystemStatus(statuses[Math.floor(Math.random() * statuses.length)]);
+    }, 5000);
+
     window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
+    window.addEventListener('mousemove', handleMouseMove);
+
+    return () => {
+      clearInterval(typeWriter);
+      clearInterval(statusInterval);
+      window.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('mousemove', handleMouseMove);
+    };
   }, []);
 
-  const currentContent = content[currentLang];
-  const currentSchemes = schemesData[currentLang] || schemesData['en'];
+  // Loading Screen
+  if (isLoading) {
+    return (
+      <div className="loading-screen crt-effect">
+        <div className="scanlines"></div>
+        <div className="terminal-loader">
+          <div className="terminal-header">
+            <span className="terminal-dot red"></span>
+            <span className="terminal-dot yellow"></span>
+            <span className="terminal-dot green"></span>
+            <span className="terminal-title">GOVERNMENT SCHEMES PORTAL v2.0</span>
+          </div>
+          <div className="terminal-body">
+            <p className="terminal-text">{terminalText}<span className="cursor">_</span></p>
+            <div className="loading-bar">
+              <div className="loading-progress"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="home-container">
-      {/* Mobile Top Navigation Bar */}
-      <nav className={`navbar ${scrolled ? 'scrolled' : ''}`}>
-        <div className="nav-container">
-          <div className="nav-left">
-            <button 
-              className="nav-toggle mobile-only"
-              onClick={() => setIsNavOpen(!isNavOpen)}
-            >
-              <span className={`toggle-icon ${isNavOpen ? 'open' : ''}`}>
-                <span></span>
-                <span></span>
-                <span></span>
-              </span>
-            </button>
-            <div className="nav-logo" data-aos="fade-right">
-              <div className="logo-icon">
-                <span>GS</span>
-              </div>
-              <span className="logo-text desktop-only">GovSchemes</span>
-            </div>
-          </div>
-
-          <div className="nav-actions" data-aos="fade-left">
-            <div className="language-selector mobile-compact">
-              <select 
-                value={currentLang} 
-                onChange={(e) => setCurrentLang(e.target.value)}
-                className="lang-dropdown"
-              >
-                {Object.entries(languages).map(([code, lang]) => (
-                  <option key={code} value={code}>{code.toUpperCase()}</option>
-                ))}
-              </select>
-            </div>
-
-            <button className="login-btn mobile-icon-only">
-              <svg className="login-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-              </svg>
-              <span className="desktop-only">{currentContent.buttons.login}</span>
-            </button>
-
-            <button 
-              className="mobile-menu-btn desktop-hidden"
-              onClick={() => setShowMobileMenu(!showMobileMenu)}
-            >
-              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
-            </button>
-          </div>
-        </div>
-      </nav>
-
-      {/* Mobile Bottom Navigation */}
-      <nav className="mobile-bottom-nav">
-        <a href="#home" className={`bottom-nav-item ${activeNavItem === 'home' ? 'active' : ''}`} onClick={() => setActiveNavItem('home')}>
-          <span className="nav-icon">🏠</span>
-          <span className="nav-label">Home</span>
-        </a>
-        <a href="#schemes" className={`bottom-nav-item ${activeNavItem === 'schemes' ? 'active' : ''}`} onClick={() => setActiveNavItem('schemes')}>
-          <span className="nav-icon">📋</span>
-          <span className="nav-label">Schemes</span>
-        </a>
-        <a href="#eligibility" className={`bottom-nav-item ${activeNavItem === 'eligibility' ? 'active' : ''}`} onClick={() => setActiveNavItem('eligibility')}>
-          <span className="nav-icon">✅</span>
-          <span className="nav-label">Check</span>
-        </a>
-        <a href="#application" className={`bottom-nav-item ${activeNavItem === 'application' ? 'active' : ''}`} onClick={() => setActiveNavItem('application')}>
-          <span className="nav-icon">📝</span>
-          <span className="nav-label">Apply</span>
-        </a>
-      </nav>
-
-      {/* Mobile Slide Menu */}
-      <div className={`mobile-slide-menu ${showMobileMenu ? 'open' : ''}`}>
-        <div className="slide-menu-header">
-          <h3>Menu</h3>
-          <button onClick={() => setShowMobileMenu(false)}>×</button>
-        </div>
-        <ul className="slide-menu-links">
-          {navItems.map((item) => (
-            <li key={item.id}>
-              <a href={item.href} onClick={() => {
-                setActiveNavItem(item.id);
-                setShowMobileMenu(false);
-              }}>
-                <span className="nav-icon">{item.icon}</span>
-                <span>{item.label}</span>
-              </a>
-            </li>
-          ))}
-        </ul>
+    <div className={`home-container crt-theme ${glitchEffect ? 'glitch' : ''}`}>
+      {/* CRT Scanlines Overlay */}
+      <div className="crt-overlay">
+        <div className="scanlines"></div>
+        <div className="noise"></div>
       </div>
 
-      {/* Desktop Side Navigation */}
-      <aside className={`side-nav desktop-only ${isNavOpen ? 'open' : 'closed'}`}>
-        <div className="side-nav-content">
-          <ul className="side-nav-links">
-            {navItems.map((item, index) => (
-              <li key={item.id}>
-                <a 
-                  href={item.href} 
-                  className={`nav-link ${activeNavItem === item.id ? 'active' : ''}`}
-                  onClick={() => setActiveNavItem(item.id)}
-                  data-aos="fade-right" 
-                  data-aos-delay={index * 50}
-                >
-                  <span className="nav-icon">{item.icon}</span>
-                  <span className="nav-label">{item.label}</span>
-                </a>
-              </li>
-            ))}
-          </ul>
+      {/* Scroll Progress Bar */}
+      <div className="scroll-progress-bar">
+        <div className="progress-fill" style={{ width: `${scrollProgress}%` }}></div>
+      </div>
 
-          <div className="nav-footer">
-            <div className="nav-stats">
-              <div className="stat-mini">
-                <span className="stat-value">24/7</span>
-                <span className="stat-label">Support</span>
-              </div>
-            </div>
+      {/* CRT Side Navigation */}
+      <nav className="crt-side-nav">
+        <div className="nav-header">
+          <div className="logo-container">
+            <div className="logo-glitch" data-text="GSP">GSP</div>
+            <div className="logo-subtitle">GOV SCHEMES PORTAL</div>
+          </div>
+          <div className="system-status">
+            <span className="status-dot"></span>
+            <span className="status-text">{systemStatus}</span>
           </div>
         </div>
-      </aside>
 
-      {/* Main Content */}
-      <main className={`main-content ${isNavOpen ? 'nav-open' : 'nav-closed'}`}>
-        {/* Hero Section */}
-        <section className="hero">
-          <div className="hero-background">
-            <div className="gradient-overlay"></div>
-            <div className="animated-shapes">
-              <div className="shape shape-1" data-aos="zoom-in" data-aos-delay="200"></div>
-              <div className="shape shape-2" data-aos="zoom-in" data-aos-delay="400"></div>
-              <div className="shape shape-3" data-aos="zoom-in" data-aos-delay="600"></div>
-            </div>
-          </div>
-
-          <div className="hero-content">
-            <h1 className="hero-title" data-aos="fade-up" data-aos-delay="100">
-              {currentContent.title}
-            </h1>
-            <p className="hero-subtitle" data-aos="fade-up" data-aos-delay="200">
-              {currentContent.subtitle}
-            </p>
-
-            <div className="search-container" data-aos="fade-up" data-aos-delay="300">
-              <input 
-                type="text" 
-                placeholder={currentContent.searchPlaceholder}
-                className="search-input"
-              />
-              <button className="search-btn">
-                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
-              </button>
-            </div>
-
-            <div className="quick-filters" data-aos="fade-up" data-aos-delay="400">
-              <button className="filter-chip">Central Government</button>
-              <button className="filter-chip">Tamil Nadu</button>
-              <button className="filter-chip">New Schemes</button>
-              <button className="filter-chip">Most Popular</button>
-            </div>
-          </div>
-        </section>
-
-        {/* Stats Section */}
-        <section className="stats-section">
-          <div className="stats-container">
-            {currentContent.stats.map((stat, index) => (
-              <div 
-                key={index} 
-                className="stat-card"
-                data-aos="flip-left"
-                data-aos-delay={index * 100}
-              >
-                <div className="stat-icon">{stat.icon}</div>
-                <h3 className="stat-number" data-aos="zoom-in" data-aos-delay={index * 100 + 200}>
-                  {stat.number}
-                </h3>
-                <p className="stat-label">{stat.label}</p>
+        <div className="nav-items">
+          {navItems.map((item, index) => (
+            <button
+              key={item.id}
+              className={`nav-item ${activeSection === item.id ? 'active' : ''}`}
+              onClick={() => setActiveSection(item.id)}
+              data-aos="fade-right"
+              data-aos-delay={index * 100}
+            >
+              <span className="nav-icon">{item.icon}</span>
+              <div className="nav-content">
+                <span className="nav-label">{item.label}</span>
+                <span className="nav-sublabel">{item.sublabel}</span>
               </div>
-            ))}
-          </div>
-        </section>
-
-        {/* Categories Section */}
-        <section className="categories-section">
-          <h2 className="section-title" data-aos="fade-up">Explore by Category</h2>
-          <div className="categories-grid">
-            {currentContent.categories.map((category, index) => (
-              <div 
-                key={index} 
-                className="category-card"
-                data-aos="fade-up"
-                data-aos-delay={index * 100}
-                data-aos-offset="100"
-              >
-                <div className="category-icon" data-aos="zoom-in" data-aos-delay={index * 100 + 200}>
-                  <div className="icon-placeholder"></div>
-                </div>
-                <h3>{category}</h3>
-                <p>Explore schemes</p>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        {/* Featured Schemes with Enhanced Cards */}
-        <section className="featured-section">
-          <h2 className="section-title" data-aos="fade-up">Featured Schemes</h2>
-          <div className="schemes-carousel">
-            {currentSchemes.slice(0, 3).map((scheme, index) => (
-              <div 
-                key={scheme.id} 
-                className={`scheme-card premium-card ${scheme.gradient}`}
-                data-aos="fade-up"
-                data-aos-delay={index * 150}
-                data-aos-offset="100"
-              >
-                <div className="card-glow"></div>
-                <div className="card-content">
-                  <div className="scheme-header">
-                    <div className="scheme-icon-wrapper">
-                      <span className="scheme-icon">{scheme.icon}</span>
-                    </div>
-                    {scheme.isNew && (
-                      <span className="scheme-badge pulse" data-aos="zoom-in" data-aos-delay={index * 150 + 200}>
-                        NEW
-                      </span>
-                    )}
-                  </div>
-                  
-                  <h3 className="scheme-title">{scheme.name}</h3>
-                  <p className="scheme-category">{scheme.category}</p>
-                  <p className="scheme-description">{scheme.description}</p>
-                  
-                  <div className="scheme-benefits">
-                    {scheme.benefits.map((benefit, idx) => (
-                      <span 
-                        key={idx} 
-                        className="benefit-tag glass-effect" 
-                        data-aos="fade-right" 
-                        data-aos-delay={index * 150 + idx * 50}
-                      >
-                        <span className="benefit-dot"></span>
-                        {benefit}
-                      </span>
-                    ))}
-                  </div>
-                  
-                  <div className="scheme-footer">
-                    <button className="learn-more-btn glass-btn">
-                      <span>{currentContent.buttons.learnMore}</span>
-                      <svg className="btn-arrow" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                      </svg>
-                    </button>
-                    <button className="apply-btn glow-btn">
-                      <span>{currentContent.buttons.applyNow}</span>
-                      <div className="btn-shine"></div>
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-          
-          <div className="view-all-container" data-aos="fade-up" data-aos-delay="400">
-            <button className="view-all-btn">
-              {currentContent.buttons.viewAll}
-              <svg className="arrow-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-              </svg>
+              <div className="nav-indicator"></div>
+              {activeSection === item.id && <div className="nav-glow"></div>}
             </button>
+          ))}
+        </div>
+
+        <div className="nav-footer">
+          <div className="user-info">
+            <div className="user-avatar">
+              <span className="avatar-icon">◉</span>
+            </div>
+            <div className="user-details">
+              <span className="user-name">GUEST USER</span>
+              <span className="user-id">ID: 00000000</span>
+            </div>
+          </div>
+          <button className="logout-btn">
+            <span className="btn-icon">⏻</span>
+            <span>LOGOUT</span>
+          </button>
+        </div>
+      </nav>
+
+      {/* Main Content Area */}
+      <main className="main-content">
+        {/* Hero Section */}
+        <section className="hero-section crt-hero">
+          <div className="matrix-rain"></div>
+          
+          <div className="hero-content" data-aos="fade-up">
+            <h1 className="hero-title glitch-text" data-text="DIGITAL INDIA">
+              DIGITAL INDIA
+            </h1>
+            <h2 className="hero-subtitle">
+              Unified Government Schemes Portal
+            </h2>
+            <p className="hero-description">
+              Access 500+ government schemes | Real-time eligibility check | Seamless application tracking
+            </p>
+            
+            <div className="hero-search" data-aos="fade-up" data-aos-delay="200">
+              <div className="search-container crt-style">
+                <input
+                  type="text"
+                  className="search-input"
+                  placeholder="Search schemes by name, category, or keyword..."
+                />
+                <button className="search-btn">
+                  <span className="btn-text">SEARCH</span>
+                  <span className="btn-icon">►</span>
+                </button>
+              </div>
+            </div>
+
+            <div className="quick-stats" data-aos="fade-up" data-aos-delay="300">
+              <div className="stat-card">
+                <div className="stat-value">500+</div>
+                <div className="stat-label">Active Schemes</div>
+              </div>
+              <div className="stat-card">
+                <div className="stat-value">25M+</div>
+                <div className="stat-label">Beneficiaries</div>
+              </div>
+              <div className="stat-card">
+                <div className="stat-value">100%</div>
+                <div className="stat-label">Digital Process</div>
+              </div>
+              <div className="stat-card">
+                <div className="stat-value">24/7</div>
+                <div className="stat-label">Support</div>
+              </div>
+            </div>
+          </div>
+
+          <div className="hero-visual">
+            <div className="hologram-display" data-aos="fade-left" data-aos-delay="400">
+              <div className="hologram-content">
+                <div className="data-visualization">
+                  <canvas id="dataCanvas"></canvas>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Scheme Categories Grid */}
+        <section className="categories-section">
+          <div className="section-header" data-aos="fade-up">
+            <h2 className="section-title crt-text">SCHEME CATEGORIES</h2>
+            <div className="title-underline"></div>
+          </div>
+
+          <div className="categories-grid">
+            {schemeCategories.map((category, index) => (
+              <div
+                key={category.id}
+                className="category-card crt-card"
+                data-aos="zoom-in"
+                data-aos-delay={index * 100}
+                style={{ '--accent-color': category.color }}
+              >
+                <div className="card-header">
+                  <span className="category-icon">{category.icon}</span>
+                  <div className="card-stats">
+                    <span className="schemes-count">{category.schemes}</span>
+                    <span className="schemes-label">SCHEMES</span>
+                  </div>
+                </div>
+                <h3 className="category-name">{category.name}</h3>
+                <p className="category-description">{category.description}</p>
+                <div className="beneficiary-info">
+                  <span className="info-icon">👥</span>
+                  <span className="info-text">{category.beneficiaries} Beneficiaries</span>
+                </div>
+                <button className="explore-btn">
+                  <span>EXPLORE</span>
+                  <span className="btn-arrow">→</span>
+                </button>
+                <div className="card-glow"></div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* Featured Schemes Terminal */}
+        <section className="featured-section">
+          <div className="section-header" data-aos="fade-up">
+            <h2 className="section-title crt-text">FEATURED SCHEMES</h2>
+            <div className="title-underline"></div>
+          </div>
+
+          <div className="terminal-container" data-aos="fade-up" data-aos-delay="200">
+            <div className="terminal-header">
+              <div className="terminal-controls">
+                <span className="control-btn minimize">_</span>
+                <span className="control-btn maximize">□</span>
+                <span className="control-btn close">×</span>
+              </div>
+              <span className="terminal-title">scheme_database.exe</span>
+            </div>
+            
+            <div className="terminal-content">
+              {featuredSchemes.map((scheme, index) => (
+                <div
+                  key={scheme.id}
+                  className="scheme-entry"
+                  data-aos="fade-right"
+                  data-aos-delay={index * 150}
+                >
+                  <div className="scheme-header">
+                    <span className="scheme-id">[{scheme.id.toString().padStart(3, '0')}]</span>
+                    <span className="scheme-name">{scheme.name}</span>
+                    <span className={`scheme-status ${scheme.priority.toLowerCase()}`}>
+                      {scheme.priority}
+                    </span>
+                  </div>
+                  <div className="scheme-details">
+                    <div className="detail-row">
+                      <span className="detail-label">FULL_NAME:</span>
+                      <span className="detail-value">{scheme.fullName}</span>
+                    </div>
+                    <div className="detail-row">
+                      <span className="detail-label">CATEGORY:</span>
+                      <span className="detail-value">{scheme.category}</span>
+                    </div>
+                    <div className="detail-row">
+                      <span className="detail-label">BENEFITS:</span>
+                      <span className="detail-value">{scheme.benefits}</span>
+                    </div>
+                    <div className="detail-row">
+                      <span className="detail-label">ELIGIBILITY:</span>
+                      <span className="detail-value">{scheme.eligibility}</span>
+                    </div>
+                    <div className="detail-row">
+                      <span className="detail-label">LAST_UPDATE:</span>
+                      <span className="detail-value">{scheme.lastUpdated}</span>
+                    </div>
+                  </div>
+                  <div className="scheme-actions">
+                    <button className="action-btn apply">APPLY</button>
+                    <button className="action-btn details">DETAILS</button>
+                    <button className="action-btn check">CHECK ELIGIBILITY</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+            
+            <div className="terminal-footer">
+              <span className="terminal-prompt">&gt; _</span>
+            </div>
+          </div>
+        </section>
+
+        {/* Interactive Dashboard */}
+        <section className="dashboard-section">
+          <div className="section-header" data-aos="fade-up">
+            <h2 className="section-title crt-text">REAL-TIME ANALYTICS</h2>
+            <div className="title-underline"></div>
+          </div>
+
+          <div className="dashboard-grid">
+            <div className="dashboard-card large" data-aos="fade-up" data-aos-delay="100">
+              <div className="card-header">
+                <h3 className="card-title">APPLICATION FLOW</h3>
+                <span className="live-indicator">● LIVE</span>
+              </div>
+              <div className="chart-container">
+                <div className="flow-chart">
+                  <div className="flow-item">
+                    <div className="flow-number">2,456</div>
+                    <div className="flow-label">New Applications</div>
+                  </div>
+                  <div className="flow-arrow">→</div>
+                  <div className="flow-item">
+                    <div className="flow-number">1,823</div>
+                    <div className="flow-label">Under Review</div>
+                  </div>
+                  <div className="flow-arrow">→</div>
+                  <div className="flow-item">
+                    <div className="flow-number">1,567</div>
+                    <div className="flow-label">Approved</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="dashboard-card" data-aos="fade-up" data-aos-delay="200">
+              <div className="card-header">
+                <h3 className="card-title">SCHEME PERFORMANCE</h3>
+              </div>
+              <div className="performance-list">
+                <div className="performance-item">
+                  <span className="item-name">PM-KISAN</span>
+                  <div className="progress-bar">
+                    <div className="progress" style={{ width: '87%' }}></div>
+                  </div>
+                  <span className="item-value">87%</span>
+                </div>
+                <div className="performance-item">
+                  <span className="item-name">PMJAY</span>
+                  <div className="progress-bar">
+                    <div className="progress" style={{ width: '92%' }}></div>
+                  </div>
+                  <span className="item-value">92%</span>
+                </div>
+                <div className="performance-item">
+                  <span className="item-name">PM-AWAS</span>
+                  <div className="progress-bar">
+                    <div className="progress" style={{ width: '78%' }}></div>
+                  </div>
+                  <span className="item-value">78%</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="dashboard-card" data-aos="fade-up" data-aos-delay="300">
+              <div className="card-header">
+                <h3 className="card-title">SYSTEM HEALTH</h3>
+              </div>
+              <div className="system-metrics">
+                <div className="metric">
+                  <div className="metric-label">CPU</div>
+                  <div className="metric-value">42%</div>
+                  <div className="metric-bar">
+                    <div className="bar-fill" style={{ width: '42%' }}></div>
+                  </div>
+                </div>
+                <div className="metric">
+                  <div className="metric-label">RAM</div>
+                  <div className="metric-value">68%</div>
+                  <div className="metric-bar">
+                    <div className="bar-fill" style={{ width: '68%' }}></div>
+                  </div>
+                </div>
+                <div className="metric">
+                  <div className="metric-label">NETWORK</div>
+                  <div className="metric-value">94%</div>
+                  <div className="metric-bar">
+                    <div className="bar-fill" style={{ width: '94%' }}></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* AI Assistant Section */}
+        <section className="ai-assistant-section">
+          <div className="section-header" data-aos="fade-up">
+            <h2 className="section-title crt-text">AI-POWERED ASSISTANT</h2>
+            <div className="title-underline"></div>
+          </div>
+
+          <div className="ai-container" data-aos="fade-up" data-aos-delay="200">
+            <div className="ai-interface">
+              <div className="ai-avatar">
+                <div className="avatar-ring"></div>
+                <div className="avatar-core">AI</div>
+                <div className="avatar-pulse"></div>
+              </div>
+              
+              <div className="ai-chat">
+                <div className="chat-message system">
+                  <span className="message-text">Hello! I'm your AI assistant. I can help you find suitable government schemes based on your profile.</span>
+                </div>
+                <div className="chat-input-container">
+                  <input
+                    type="text"
+                    className="chat-input"
+                    placeholder="Ask me about government schemes..."
+                  />
+                  <button className="send-btn">SEND</button>
+                </div>
+              </div>
+            </div>
           </div>
         </section>
       </main>
 
-      {/* Floating Action Button */}
-      <div className="fab-container" data-aos="fade-up" data-aos-delay="1000">
-        <button className="fab">
-          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
+      {/* Floating Action Buttons */}
+      <div className="fab-container">
+        <button className="fab primary" data-aos="fade-left" data-aos-delay="500">
+          <span className="fab-icon">+</span>
+          <span className="fab-label">NEW APPLICATION</span>
+        </button>
+        <button className="fab secondary" data-aos="fade-left" data-aos-delay="600">
+          <span className="fab-icon">?</span>
+          <span className="fab-label">HELP</span>
         </button>
       </div>
+
+      {/* Mouse Follower Effect */}
+      <div 
+        className="mouse-glow"
+        style={{
+          left: mousePosition.x + 'px',
+          top: mousePosition.y + 'px'
+        }}
+      ></div>
     </div>
   );
 };
